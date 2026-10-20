@@ -1,5 +1,7 @@
 # Factory Crank
 
+[Play in your browser](https://solyin-enof.github.io/factory-crank/) — works on phones and desktop.
+
 A portrait mobile factory game about becoming something more: swing a pickaxe, drive a furnace blower, pull a press lever, then build machinery that takes over those jobs. Gears open a workshop where shared stock can become automation or new products. There is no eight-gear ending.
 
 TypeScript, Vite, Canvas 2D and SVG. Original visuals and synthesized sound; no accounts, backend, ads or third-party game assets.

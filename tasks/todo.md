@@ -98,3 +98,12 @@ Plan review: Serve the compiled game from gh-pages at https://solyin-enof.github
 - Real browser flow made the first gear and opened two choice cards with missing stock. Isolated advanced UI checks built projects, selected spring output, reassigned the crawler, completed the mast, and observed automatic stock growth without an end dialog.
 - Review found and fixed modal-arrow input leakage, outdated GEARS routing labels, and product-first empty-hopper guidance. The automated press's manual control is removed after installation.
 - Production build passes. Physical phone feel, pacing and voluntary replay remain human playtest questions; tests do not establish fun.
+
+## Connect local checkout to GitHub
+- [x] Configure origin and repository-local gh HTTPS authentication as solyin-enof.
+- [x] Join local and published histories while retaining current source and Pages paths.
+- [x] Verify tests/build; push main and verify latest Pages build deployment.
+
+Plan review: Preserve both histories, track origin/main, and publish the compiled game through gh-pages.
+
+Remote review: 40 tests and production build pass. Fresh output matches gh-pages exactly; live index matches the build and Pages reports built. Origin uses HTTPS with repository-local gh credentials for solyin-enof. Main tracks origin/main.
