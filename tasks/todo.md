@@ -62,3 +62,39 @@ Plan review: Mining is a physical downward swing, not a tap or hold shortcut. Th
 Plan review: Reproduced HTTP 403 using the phone's hostname as the Host header. Add an explicit allowlist entry; retain existing all-interface listening for mobile access.
 
 Mobile hostname review: Reproduced HTTP 403, added vite.config.ts and restarted the existing dev server on port 5173. The exact Tailscale Host header now returns the game with HTTP 200; unrelated.invalid still returns HTTP 403; localhost returns HTTP 200. Production build passes.
+
+## Open-ended workshop expansion
+- [x] Research factory-game enjoyment and game enjoyment using primary sources; save cited findings.
+- [x] Implement typed project catalog, atomic costs, lifetime unlocks and resource accounting.
+- [x] Add springs/frames, press automation, ore hoist, thermal jacket, crawler jobs and signal mast.
+- [x] Replace eight-gear stop with continuing milestones and progressive workshop UI.
+- [x] Migrate saves, verify full production/choice paths and browser/mobile interactions.
+- [x] Update documentation and review results; commit.
+
+Plan review: docs/workshop-expansion.md defines the bounded playable expansion. First gear opens an automation-versus-new-products choice. Every subsequent project changes production or opens a new capability. Preserve the uncluttered opening and physical gestures.
+
+## Public test repository
+- [x] Find the solyin-enof GitHub browser session and review publication files.
+- [x] Verify current snapshot: 40 tests pass and production build succeeds.
+- [x] Publish a fresh public snapshot without QA artifacts or local hostname.
+- [x] Verify uploaded files and public visibility.
+
+Plan review: Publish the current Factory Crank source to solyin-enof/factory-crank using a fresh history; preserve local in-progress changes.
+
+Publication review: Public repository https://github.com/solyin-enof/factory-crank verified in the solyin-enof browser session. All 39 source/document files uploaded in a fresh Git history. Tests: 40 passing; production build passes. QA artifacts, dependencies, build output and machine-specific allowed hostname are excluded. Local gameplay work remains unchanged.
+
+## GitHub Pages playtest
+- [x] Build public snapshot with /factory-crank/ asset base.
+- [x] Commit and upload static files to gh-pages; enable Pages.
+- [x] Verify deployed game loads and accepts input.
+
+Plan review: Serve the compiled game from gh-pages at https://solyin-enof.github.io/factory-crank/.
+
+
+## Workshop expansion review
+- Primary-source research saved in docs/gameplay-research.md. User-provided inspiration read and summarized separately in docs/original-inspiration.md; the implementation emphasizes material transformation and obsolete manual controls.
+- Six projects, springs/frames, automated pressing, crawler jobs, thermal throughput and a non-blocking signal milestone implemented. The fresh mine remains unchanged.
+- 40 tests pass. Full input-driven construction of all six projects finishes around297s, preserves material accounting and continues unattended. Save v4 migrates previously finished games and preserves old supply.
+- Real browser flow made the first gear and opened two choice cards with missing stock. Isolated advanced UI checks built projects, selected spring output, reassigned the crawler, completed the mast, and observed automatic stock growth without an end dialog.
+- Review found and fixed modal-arrow input leakage, outdated GEARS routing labels, and product-first empty-hopper guidance. The automated press's manual control is removed after installation.
+- Production build passes. Physical phone feel, pacing and voluntary replay remain human playtest questions; tests do not establish fun.

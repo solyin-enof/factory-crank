@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { initialState, step, installMotor, transferReserve, advanceWheel, setPressPosition, swingPickaxe } from '../src/game/simulation';
 import { smelt, pressGear } from '../src/game/recipes';
 import { BALANCE as B } from '../src/config/balance';
+import { buildProject } from '../src/game/workshop';
 import { updateProgression } from '../src/game/progression';
 
 const run = (state: ReturnType<typeof initialState>, seconds: number) => {
@@ -55,7 +56,7 @@ describe('factory simulation', () => {
   it('rewards exactly one kit and consumes it once on installation', () => {
     const s = minedState();
     expect(installMotor(s)).toBe(false);
-    s.gears = 3;
+    s.gears = 3; s.gearsMade = 3;
     updateProgression(s); updateProgression(s);
     expect(s.kit).toBe(1);
     expect(installMotor(s)).toBe(true);
@@ -79,15 +80,18 @@ describe('factory simulation', () => {
     for (let i = 0; i < 3; i++) pressGear(s);
     updateProgression(s);
     installMotor(s);
+    expect(buildProject(s, 'oreHoist')).toBe(false);
+    smelt(s); smelt(s);
+    expect(buildProject(s, 'oreHoist')).toBe(true);
     run(s, 20);
     expect(s.autoOutput).toBeGreaterThan(0);
-    for (let i = 0; i < 180 * 60 && !s.finished; i++) {
+    for (let i = 0; i < 180 * 60 && s.gears < 8; i++) {
       if (i % 90 === 0) { setPressPosition(s, 0); setPressPosition(s, 1); }
       step(s, 1 / 60);
-      expect(s.ore + s.plates + s.reserve + s.gears * 2).toBe(12 + s.deliveries * 2);
+      expect(s.ore + s.plates + s.reserve + s.gears * 2 + s.materialSpent).toBe(12 + s.deliveries * 2);
     }
-    expect(s.finished).toBe(true);
-    expect(s.gears).toBe(8);
+    expect(s.finished).toBe(false);
+    expect(s.gears).toBeGreaterThanOrEqual(8);
     expect(s.temperature).toBeGreaterThan(35);
     expect(s.temperature).toBeLessThan(80);
   });
@@ -104,7 +108,7 @@ describe('factory simulation', () => {
   });
   it('plays the entire run through mining, manual crank input and the motor upgrade', () => {
     const s = initialState();
-    for (let frame = 0; frame < 300 * 60 && !s.finished; frame++) {
+    for (let frame = 0; frame < 300 * 60 && s.gears < 8; frame++) {
       // A one-thumb operator makes occasional furnace corrections, then cranks
       // the press while furnace inertia keeps the blower moving.
       const targetSpeed = Math.max(0, Math.min(B.maxSpeed,
@@ -119,9 +123,11 @@ describe('factory simulation', () => {
       }
       step(s, 1 / 60);
       if (s.kit > 0) expect(installMotor(s)).toBe(true);
-      expect(s.ore + s.plates + s.reserve + 2 * s.gears).toBe(s.minedOre + B.deliveryOre * s.deliveries);
+      if (s.automatic) buildProject(s, 'oreHoist');
+      expect(s.ore + s.plates + s.reserve + 2 * s.gears + s.materialSpent).toBe(s.minedOre + s.deliveredOre);
     }
-    expect(s.finished).toBe(true);
+    expect(s.finished).toBe(false);
+    expect(s.gears).toBeGreaterThanOrEqual(8);
     expect(s.elapsed).toBeLessThan(300);
     expect(s.firstPlate).toBeGreaterThan(0);
     expect(s.firstGear).toBeGreaterThan(s.firstPlate!);

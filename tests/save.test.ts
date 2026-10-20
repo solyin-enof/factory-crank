@@ -16,9 +16,9 @@ it('migrates v1 stocks and milestones while clearing the obsolete wheel', () => 
  const legacy = {...initialState(),ore:7,plates:3,gears:3,kit:1,rewarded:true,elapsed:85,firstPlate:7,firstGear:25,pressProgress:0.8,press:{angle:4,speed:8,impulse:0}};
  vi.stubGlobal('localStorage',{getItem:()=>JSON.stringify({version:1,state:legacy})});
  const state = load();
- expect(state).toEqual({...legacy,press:initialState().press,minedOre:12,supplyTime:0});
+ expect(state).toEqual({...legacy,press:initialState().press,minedOre:12,supplyTime:0,gearsMade:3});
 });
-it('round trips v3 lever and mining state using the original storage key', () => {
+it('round trips v4 lever and mining state using the original storage key', () => {
  let data = '';
  vi.stubGlobal('localStorage',{
   getItem:(key:string)=>key==='factory-crank-v1'?data:null,
@@ -27,7 +27,7 @@ it('round trips v3 lever and mining state using the original storage key', () =>
  const state=initialState();
  state.press={position:1,target:1,strokes:2,armed:false};
  save(state);
- expect(JSON.parse(data).version).toBe(3);
+ expect(JSON.parse(data).version).toBe(4);
  expect(load()).toEqual(state);
 });
 it('rejects invalid lever values', () => {
@@ -45,4 +45,23 @@ it('migrates v2 saves without banking pre-motor elapsed time', () => {
  expect(state.supplyTime).toBe(36);
  expect(state.pressProgress).toBe(0.5);
  expect(state.mine).toEqual(initialState().mine);
+});
+
+it('resumes completed v3 saves and preserves legacy supply without erasing stock',()=>{
+ const legacy={...initialState(),ore:4,plates:3,reserve:1,gears:8,automatic:true,rewarded:true,finished:true,minedOre:20,deliveries:2,supplyTime:27};
+ vi.stubGlobal('localStorage',{getItem:()=>JSON.stringify({version:3,state:legacy})});
+ const s=load();
+ expect(s.ore).toBe(4); expect(s.gears).toBe(8); expect(s.gearsMade).toBe(8);
+ expect(s.finished).toBe(false); expect(s.workshop.oreHoist).toBe(true);
+ expect(s.deliveredOre).toBe(4); expect(s.supplyTime).toBe(27);
+});
+it('credits three lifetime gears for an older installed motor even if held gears are lower',()=>{
+ const legacy={...initialState(),automatic:true,gears:0};
+ vi.stubGlobal('localStorage',{getItem:()=>JSON.stringify({version:3,state:legacy})});
+ expect(load().gearsMade).toBe(3);
+});
+it('rejects malformed workshop and recipe state',()=>{
+ for(const partial of [{workshop:null},{workshop:{}},{workshop:{...initialState().workshop,crawler:1}},{pressRecipe:'bad'},{crawlerJob:'bad'},{springs:0.5},{deliveredOre:-1}]){
+  expect(validState({...initialState(),...partial})).toBe(false);
+ }
 });

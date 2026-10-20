@@ -7,10 +7,14 @@ export const factoryMarkup = `
 <div class="goalbar"><i id="goal-fill"></i></div>
 <div class="scene"><span class="scene-label">ORE → HEAT → PLATES → FORCE → GEARS</span><span class="live" id="live">● MANUAL</span><canvas aria-label="Ore falls from the hopper into a furnace. A belt-driven blower feeds air to the fire. Plates feed a lever-operated gear press."></canvas><div class="status" id="status"></div></div>
 <div class="inventory"><div id="stock-ore"><span class="material">◆</span><section><b id="ore">0</b><small>IRON ORE</small></section></div><div id="stock-plates"><span class="material">▰</span><section><b id="plates">0</b><small>PLATES</small></section></div><div id="stock-gears"><span class="material">⚙</span><section><b id="gear-count">0</b><small>GEARS</small></section></div></div>
+<div class="extra-parts" id="extra-parts" hidden><span>♧ <b id="springs">0</b> SPRINGS</span><span>▱ <b id="frames">0</b> FRAMES</span></div>
+<p id="material-path" class="material-path" hidden></p>
+<p id="factory-summary" class="factory-summary" hidden></p>
 <div class="motor"><span id="motor-label"></span><button id="install" disabled>Install motor ↗</button></div>
-<nav class="tabs" id="station-tabs" aria-label="Workstations"><button id="mine" class="active">Mine</button><button id="furnace">Furnace</button><button id="press">Gear press</button></nav>
+<nav class="tabs" id="station-tabs" aria-label="Workstations"><button id="mine" class="active">Mine</button><button id="furnace">Furnace</button><button id="press">Press</button></nav>
+<div id="press-dies" class="press-dies" hidden><span>PRESS DIE</span><button id="die-gear" aria-pressed="true">Gear</button><button id="die-spring" aria-pressed="false">Spring</button><button id="die-frame" aria-pressed="false">Frame</button></div>
 <div class="controls">
- <div id="decision-controls"><div id="allocation"><p class="control-label">SEND NEW PLATES TO</p><div class="route" id="route" aria-label="Plate routing"><button class="selected" id="to-gears" aria-label="Route plates to gears">GEARS</button><button id="to-reserve" aria-label="Route plates to reserve">RESERVE</button></div><button class="small-action" id="transfer">Reserve: 0 · send to press ↗</button></div></div>
+ <div id="decision-controls"><div id="allocation"><p class="control-label">SEND NEW PLATES TO</p><div class="route" id="route" aria-label="Plate routing"><button class="selected" id="to-gears" aria-label="Route plates to press">PRESS</button><button id="to-reserve" aria-label="Route plates to reserve">RESERVE</button></div><button class="small-action" id="transfer">Reserve: 0 · send to press ↗</button></div></div>
  <div class="machine-panel">
   <p class="control-label" id="mechanism-label">FURNACE / BLOWER DRIVE</p>
   <button class="machine-control pickaxe" id="pickaxe" aria-label="Mine iron ore. Swipe downward to swing the pickaxe into the rock. Keyboard: Down Arrow swings; Up Arrow raises it.">
@@ -64,15 +68,24 @@ export const factoryMarkup = `
  </div>
 </div>
 <div class="hint"><span id="hint-icon">↻</span><div id="hint"></div></div>
-<footer><span>SMALL FACTORY. MADE BY YOU.</span><button id="settings">OPTIONS ↗</button></footer><pre id="debug"></pre>
-<dialog id="options"><h2>Workshop options</h2><button id="show-tutorial">How to play</button><label><input type="checkbox" id="motion"> Reduce motion</label><label><input type="checkbox" id="debug-toggle"> Show diagnostics</label><button id="resume">Back to work</button><button id="restart">Reset & replay</button></dialog>
+<div id="milestone" class="milestone" hidden role="status">⌁ SIGNAL ONLINE · YOUR WORKSHOP IS ALIVE. Keep building.</div>
+<footer><span id="footer-brand">SMALL FACTORY. MADE BY YOU.</span><button id="workshop-launch" class="workshop-launch" hidden>Workshop ↗</button><button id="settings">OPTIONS ↗</button></footer><pre id="debug"></pre>
+<dialog id="options"><h2>Workshop options</h2><button id="show-tutorial">How to play</button><label><input type="checkbox" id="motion"> Reduce motion</label><label><input type="checkbox" id="debug-toggle"> Show diagnostics</label><button id="show-stats">Production stats</button><button id="resume">Back to work</button><button id="restart">Reset & replay</button></dialog>
 <dialog id="welcome">
  <p class="eyebrow">YOUR HANDS ARE THE MACHINE</p><h2>Rock. Ore. Iron.</h2>
  <div class="tutorial-machines"><span>↻<small>BLOWER</small></span><span>↓<small>PRESS</small></span></div>
  <p><b>Swing the pickaxe.</b> Swipe down into the iron seam. Each full swing mines two ore; six ore reveal the furnace. Return to the mine whenever you need more.</p>
  <p><b>Turn the furnace crank.</b> It drives a blower that pushes air into the fire. The ore hopper feeds the furnace; heat turns ore into plates.</p>
- <p><b>Pull the press lever.</b> Select Gear press. Drag its handle down: the linked ram squeezes two plates into a gear. Three full pulls finish each gear.</p>
- <p><b>Earn your motor at 3 gears.</b> Install it to drive the blower for you. Then focus on the press and finish 8 gears.</p>
+ <p><b>Pull the press lever.</b> Select Press. Drag its handle down: the linked ram squeezes two plates into a gear. Three full pulls finish each gear.</p>
+ <p><b>Earn your motor at 3 gears.</b> Install it to drive the blower for you. Spend gears in the Workshop. Build an ore hoist to stop mining, or a tool bench to unlock spring and frame dies. Later, automate the press and build a crawler.</p>
  <button id="start-tutorial">Back to work ↗</button><button id="skip-tutorial" class="skip">Skip guide</button>
 </dialog>
-<dialog id="results"><p>PRODUCTION COMPLETE / 001</p><h2>You made it work.</h2><p id="stats"></p><button id="replay">Build it again ↗</button></dialog>`;
+<dialog id="workshop" class="workshop-dialog">
+ <div class="workshop-heading"><span class="eyebrow">BUILD YOUR WAY</span><button id="close-workshop" aria-label="Close workshop">×</button></div>
+ <h2>What will you make?</h2><p class="workshop-intro">Remove a chore. Or make something new.</p><p id="workshop-stock" class="workshop-stock"></p>
+ <p id="workshop-message" class="workshop-message" role="status"></p>
+ <div id="project-list"></div><p id="no-projects" hidden>Everything here is built. Keep making parts and watch your factory work.</p><button id="more-projects" hidden>More projects ↗</button>
+ <fieldset id="crawler-jobs" hidden><legend>Put your crawler to work</legend><div class="crawler-choices"><button id="crawler-haul" aria-pressed="true">Haul ore</button><button id="crawler-tend" aria-pressed="false">Tend fire</button></div><p id="crawler-effect"></p></fieldset>
+ <details><summary>Your factory</summary><p id="installed-projects"></p><p>Reserve plates stay out of the press. Save them for your next project.</p></details>
+</dialog>
+<dialog id="results"><p>YOUR FACTORY / STILL GROWING</p><h2>You made it work.</h2><p id="stats"></p><button id="close-stats">Back to factory</button><button id="replay">Start over ↗</button></dialog>`;

@@ -28,7 +28,7 @@ describe('progressive controls', () => {
     const state = initialState();
     state.gears = 1;
     expect(unlocks(state)).toEqual({ furnace: true, press: true, routing: true, motor: false, plates: true, gears: true });
-    state.gears = 2;
+    state.gears = 2;state.gearsMade = 2;
     expect(unlocks(state).motor).toBe(true);
   });
 
@@ -43,6 +43,13 @@ describe('progressive controls', () => {
     expect(unlocks(state).press).toBe(true);
     expect(unlocks(state).routing).toBe(true);
     expect(unlocks(state).gears).toBe(true);
+  });
+
+  it('keeps gear controls and motor discovery after spending stock',()=>{
+    const state=initialState();state.gearsMade=3;state.gears=0;
+    expect(unlocks(state).routing).toBe(true);
+    expect(unlocks(state).press).toBe(true);
+    expect(unlocks(state).motor).toBe(true);
   });
 
   it('infers earlier milestones from a legacy save containing a motor kit or automation', () => {

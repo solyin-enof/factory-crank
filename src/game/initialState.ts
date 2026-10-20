@@ -2,6 +2,8 @@ import { BALANCE } from '../config/balance';
 import type { State } from './types';
 export function initialState(): State {
   return {
+    workshop:{oreHoist:false,toolBench:false,beltDrive:false,crawler:false,thermalJacket:false,signalMast:false},
+    springs:0, frames:0, gearsMade:0, springsMade:0, framesMade:0, pressRecipe:'gear', materialSpent:0, deliveredOre:0, crawlerJob:'haul', autoParts:0,
     mine: { position: 0, armed: true, strikes: 0 }, minedOre: 0, supplyTime: 0,
     ore: BALANCE.initialOre, plates: 0, reserve: 0, gears: 0, kit: 0,
     automatic: false, rewarded: false, temperature: BALANCE.initialTemperature,
