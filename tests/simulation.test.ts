@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { initialState, step, installMotor, transferReserve, advanceWheel, setPressPosition } from '../src/game/simulation';
+import { initialState, step, installMotor, transferReserve, advanceWheel, setPressPosition, swingPickaxe } from '../src/game/simulation';
 import { smelt, pressGear } from '../src/game/recipes';
 import { BALANCE as B } from '../src/config/balance';
 import { updateProgression } from '../src/game/progression';
@@ -8,9 +8,15 @@ const run = (state: ReturnType<typeof initialState>, seconds: number) => {
   for (let i = 0; i < seconds * 60; i++) step(state, 1 / 60);
 };
 
+const minedState = () => {
+  const s = initialState();
+  for (let i = 0; i < 6; i++) { swingPickaxe(s, 0); swingPickaxe(s, 1); }
+  return s;
+};
+
 describe('factory simulation', () => {
   it('makes recipes atomic and conserves material through routing', () => {
-    const s = initialState();
+    const s = minedState();
     expect(pressGear(s)).toBe(false);
     s.route = 'reserve';
     smelt(s); smelt(s);
@@ -35,19 +41,19 @@ describe('factory simulation', () => {
   });
   it('halts smelting outside the operating temperature band', () => {
     for (const temperature of [20, 90]) {
-      const s = initialState();
+      const s = minedState();
       s.temperature = temperature;
       step(s, 1 / 60);
       expect(s.furnaceProgress).toBe(0);
       expect(s.ore).toBe(12);
     }
-    const s = initialState();
+    const s = minedState();
     s.temperature = 50;
     step(s, 1 / 60);
     expect(s.furnaceProgress).toBeGreaterThan(0);
   });
   it('rewards exactly one kit and consumes it once on installation', () => {
-    const s = initialState();
+    const s = minedState();
     expect(installMotor(s)).toBe(false);
     s.gears = 3;
     updateProgression(s); updateProgression(s);
@@ -58,7 +64,7 @@ describe('factory simulation', () => {
     expect(s.active).toBe('press');
   });
   it('makes a first plate within ten seconds with a maintained crank', () => {
-    const s = initialState();
+    const s = minedState();
     for (let i = 0; i < 10 * 60 && s.firstPlate === null; i++) {
       s.furnace.impulse += 0.08;
       step(s, 1 / 60);
@@ -67,7 +73,7 @@ describe('factory simulation', () => {
     expect(s.firstPlate!).toBeLessThanOrEqual(10);
   });
   it('automates without touch, replenishes ore and completes eight gears', () => {
-    const s = initialState();
+    const s = minedState();
     // Reach the milestone through explicit recipes, then let the motor work.
     for (let i = 0; i < 6; i++) smelt(s);
     for (let i = 0; i < 3; i++) pressGear(s);
@@ -88,7 +94,7 @@ describe('factory simulation', () => {
   it('includes both exact temperature boundaries and excludes adjacent values', () => {
     const dt = 1 / 60;
     for (const [temperature, allowed] of [[35, true], [80, true], [34.999, false], [80.001, false]] as const) {
-      const s = initialState();
+      const s = minedState();
       // Idle cooling lands exactly on the requested boundary after this step.
       s.temperature = temperature + B.cooling * dt;
       step(s, dt);
@@ -96,14 +102,16 @@ describe('factory simulation', () => {
       expect(s.furnaceProgress > 0).toBe(allowed);
     }
   });
-  it('plays the entire run through manual crank input and the motor upgrade', () => {
+  it('plays the entire run through mining, manual crank input and the motor upgrade', () => {
     const s = initialState();
     for (let frame = 0; frame < 300 * 60 && !s.finished; frame++) {
       // A one-thumb operator makes occasional furnace corrections, then cranks
       // the press while furnace inertia keeps the blower moving.
       const targetSpeed = Math.max(0, Math.min(B.maxSpeed,
         (B.cooling + (55 - s.temperature) * 0.7) / B.heating * B.maxSpeed));
-      if (!s.automatic && s.furnace.speed < targetSpeed - 1) {
+      if (!s.automatic && (s.minedOre < B.miningUnlockOre || s.ore === 0)) {
+        if (frame % 90 === 0) { swingPickaxe(s, 0); swingPickaxe(s, 1); }
+      } else if (!s.automatic && s.furnace.speed < targetSpeed - 1) {
         s.furnace.impulse += 0.2;
       } else if (s.plates >= 2 && frame % 90 === 0) {
         setPressPosition(s, 0);
@@ -111,7 +119,7 @@ describe('factory simulation', () => {
       }
       step(s, 1 / 60);
       if (s.kit > 0) expect(installMotor(s)).toBe(true);
-      expect(s.ore + s.plates + s.reserve + 2 * s.gears).toBe(12 + B.deliveryOre * s.deliveries);
+      expect(s.ore + s.plates + s.reserve + 2 * s.gears).toBe(s.minedOre + B.deliveryOre * s.deliveries);
     }
     expect(s.finished).toBe(true);
     expect(s.elapsed).toBeLessThan(300);
@@ -126,7 +134,7 @@ describe('factory simulation', () => {
   });
 
   it('requires full return travel and never manufactures from holding or jitter', () => {
-    const s = initialState();
+    const s = minedState();
     expect(setPressPosition(s, 1)).toBe(false);
     expect(s.press.strokes).toBe(0);
     s.plates = 6;
@@ -158,6 +166,28 @@ describe('factory simulation', () => {
     expect(s.press.position).toBe(0);
     expect(setPressPosition(s, 10)).toBe(true);
     expect(s.press.position).toBe(1);
+  });
+
+  it('mines only on complete swings and never supplies ore before the motor', () => {
+    const s = initialState();
+    expect(s.ore).toBe(0);
+    expect(s.active).toBe('mine');
+    run(s, 120);
+    expect(s.ore).toBe(0);
+    expect(s.deliveries).toBe(0);
+    expect(s.supplyTime).toBe(0);
+    expect(swingPickaxe(s, NaN)).toBe(false);
+    expect(swingPickaxe(s, 0.89)).toBe(false);
+    expect(swingPickaxe(s, 0.9)).toBe(true);
+    for (let i = 0; i < 100; i++) swingPickaxe(s, i % 2 ? 0.95 : 1);
+    expect(s.ore).toBe(2);
+    swingPickaxe(s, 0.16);
+    expect(swingPickaxe(s, 1)).toBe(false);
+    swingPickaxe(s, 0.15);
+    expect(swingPickaxe(s, 1)).toBe(true);
+    expect(s.ore).toBe(4);
+    expect(s.minedOre).toBe(4);
+    expect(s.mine.strikes).toBe(2);
   });
 
 });

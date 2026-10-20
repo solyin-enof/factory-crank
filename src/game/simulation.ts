@@ -26,7 +26,8 @@ export function step(state: State, dt: number): void {
   }
   state.temperature = Math.max(20, Math.min(110,
     state.temperature + (state.furnace.speed / B.maxSpeed * B.heating - B.cooling) * dt));
-  const deliveries = Math.floor(state.elapsed / B.deliverySeconds);
+  if (state.automatic) state.supplyTime += dt;
+  const deliveries = Math.floor(state.supplyTime / B.deliverySeconds);
   if (deliveries > state.deliveries) {
     state.ore += (deliveries - state.deliveries) * B.deliveryOre;
     state.deliveries = deliveries;
@@ -54,5 +55,20 @@ export function setPressPosition(state: State, position: number): boolean {
     if (pressGear(state)) state.pressProgress = Math.max(0, state.pressProgress - 1);
   }
   updateProgression(state);
+  return true;
+}
+
+/** One complete pickaxe swing extracts a batch; holding cannot extract more. */
+export function swingPickaxe(state: State, position: number): boolean {
+  if (state.finished || !Number.isFinite(position)) return false;
+  const pick = state.mine;
+  pick.position = Math.max(0, Math.min(1, position));
+  if (pick.position <= 0.15) pick.armed = true;
+  if (pick.position < 0.9 || !pick.armed) return false;
+  pick.armed = false;
+  pick.strikes += 1;
+  state.ore += B.miningOre;
+  state.minedOre += B.miningOre;
+  state.manualTime += 0.2;
   return true;
 }

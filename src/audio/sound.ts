@@ -9,6 +9,15 @@ export class Sound {
   this.hum.gain.setTargetAtTime(this.muted||paused?0:Math.min(speed/14,1)*.085,this.context.currentTime,.1);
   this.oscillator.frequency.setTargetAtTime(90+speed*8,this.context.currentTime,.1);
  }
+ strike() {
+  this.ping(760);
+  if(!this.context||this.muted)return;
+  const buffer=this.context.createBuffer(1,this.context.sampleRate*.06,this.context.sampleRate);
+  const samples=buffer.getChannelData(0);
+  for(let i=0;i<samples.length;i++)samples[i]=(Math.random()*2-1)*(1-i/samples.length);
+  const source=this.context.createBufferSource(),gain=this.context.createGain();
+  source.buffer=buffer;gain.gain.value=.1;source.connect(gain).connect(this.context.destination);source.start();
+ }
  clank() { this.ping(180); }
  ping(frequency = 420) {
   if (!this.context || this.muted) return;

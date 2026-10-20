@@ -88,3 +88,44 @@ describe('lever displacement', () => {
     controls.dispose();
   });
 });
+
+describe('pickaxe pointer input', () => {
+  it('requires downward movement, clamps the swing, and releases cancellation once', () => {
+    const wheel = new FakeControl();
+    const route = new FakeControl();
+    const lever = new FakeControl();
+    const pickaxe = new FakeControl();
+    const swings: number[] = [];
+    const leverPositions: number[] = [];
+    let releases = 0;
+    const controls = new PointerControls(wheel.element, route.element, {
+      turn: () => {}, route: () => {}, gesture: () => {},
+      swing: value => swings.push(value), swingRelease: () => { releases++; },
+      lever: value => leverPositions.push(value),
+    }, lever.element, pickaxe.element);
+    pickaxe.pointer('pointerdown', 1, 20);
+    pickaxe.pointer('pointerdown', 2, 20);
+    lever.pointer('pointerdown', 3, 20);
+    expect(controls.activePointers).toBe(2);
+    expect(swings).toEqual([]);
+    pickaxe.pointer('pointermove', 2, 120);
+    pickaxe.pointer('pointermove', 1, 70);
+    pickaxe.pointer('pointermove', 1, 500);
+    pickaxe.pointer('pointermove', 1, 0);
+    expect(swings).toEqual([0.5, 1, 0]);
+    pickaxe.pointer('pointercancel', 1);
+    pickaxe.pointer('lostpointercapture', 1);
+    expect(releases).toBe(1);
+    expect(controls.activePointers).toBe(1);
+    lever.pointer('pointermove', 3, 45);
+    expect(leverPositions).toEqual([0.25]);
+    pickaxe.pointer('pointerdown', 4, 20);
+    controls.reset();
+    expect(releases).toBe(2);
+    expect(controls.activePointers).toBe(0);
+    expect(pickaxe.captures.size + lever.captures.size).toBe(0);
+    pickaxe.pointer('pointermove', 4, 120);
+    expect(swings).toHaveLength(3);
+    controls.dispose();
+  });
+});

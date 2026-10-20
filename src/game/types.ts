@@ -1,7 +1,8 @@
-export type Machine = 'furnace' | 'press';
+export type Machine = 'mine' | 'furnace' | 'press';
 export type Wheel = { angle: number; speed: number; impulse: number };
 export type Lever = { position: number; target: number; strokes: number; armed: boolean };
 export type State = {
+  mine: { position: number; armed: boolean; strikes: number }; minedOre: number; supplyTime: number;
   ore: number; plates: number; reserve: number; gears: number; kit: number;
   automatic: boolean; rewarded: boolean; temperature: number;
   furnaceProgress: number; pressProgress: number;

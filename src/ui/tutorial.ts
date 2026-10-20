@@ -1,7 +1,9 @@
 import type { State } from '../game/simulation';
 export type Guide = { stage: string; action: string; hint: string };
 export function tutorial(s: State): Guide {
+ if(s.active==='mine') return {stage:'ROCK → ORE',action:'Mine some iron.',hint:'Swipe the pickaxe down into the seam. Each full swing breaks out two ore.'};
  if(s.temperature>80&&!s.automatic) return {stage:'FURNACE / TOO HOT',action:'Let the fire cool.',hint:'Stop turning. Less air cools the fire; nothing is lost.'};
+ if(s.ore===0&&!s.automatic&&s.active==='furnace') return {stage:'FURNACE / EMPTY HOPPER',action:'The fire needs ore.',hint:'Select Mine and swing your pickaxe to refill the hopper.'};
  if(s.reserve>=2&&s.plates<2) return {stage:'PRESS / WAITING FOR METAL',action:'Send plates to the press.',hint:'Tap Reserve: send to press. Two plates feed the die.'};
  if(s.kit) return {stage:'YOUR FIRST MOTOR',action:'Let the motor take over.',hint:'Install motor: it turns the furnace blower for you.'};
  if(s.active==='press') return s.plates<2
