@@ -1,0 +1,18 @@
+export const BALANCE = {
+  initialOre: 12,
+  initialTemperature: 20,
+  temperatureMin: 35,
+  temperatureMax: 80,
+  maxSpeed: 14,
+  impulseGain: 2.4,
+  drag: 0.32,
+  load: 0.25,
+  heating: 12,
+  cooling: 3,
+  smeltSeconds: 5,
+  pressSeconds: 24,
+  motorGears: 3,
+  goalGears: 8,
+  deliverySeconds: 12,
+  deliveryOre: 2,
+} as const;
