@@ -1,6 +1,6 @@
 # Factory Crank
 
-A portrait-first factory game built with TypeScript, Vite and Canvas 2D. Start as twelve pieces of iron ore, smelt plates, press gears, then install the motor that takes over your furnace. Original drawn machinery and synthesized sound; no backend or accounts.
+A mobile factory game about operating machinery, then building a motor that takes over your work. TypeScript, Vite, Canvas 2D and SVG controls. Original visuals and synthesized Web Audio; no backend or accounts.
 
 ## Run
 
@@ -9,43 +9,40 @@ npm install
 npm run dev
 ```
 
-Open the printed localhost URL. The server binds to `0.0.0.0`; on a phone on the same Wi-Fi, use the computer's LAN IP and port 5173.
+Vite listens on `0.0.0.0:5173`. Use the computer's LAN IP from a phone on the same Wi-Fi.
 
 ```sh
 npm test
 npm run build
 ```
 
-Deploy `dist/` to a static host. The manifest and SVG icon provide PWA metadata. Offline installation/service-worker caching is not implemented.
+Deploy `dist/` to a static host. A manifest and SVG icon provide PWA metadata. Service-worker caching and offline installation are not implemented.
 
 ## Play
 
-The first-run walkthrough explains the chain before starting. The large heading and bottom instruction advance with actual progress. Reopen the guide through **Options → How to play**, or skip it.
+The game starts with **only ore, a furnace and its blower crank**. There is no opening tutorial or hold-to-produce button. A short instruction beside the mechanism explains its effect.
 
-1. **Hold HOLD TO CRANK** underneath the wheel, or drag clockwise around its rim. On desktop, hold Space or Right Arrow with the wheel or hold button focused. A wheel tap nudges it; a tap alone will not sustain production.
-2. Heat the furnace into the 35–80° operating band. Release to coast when it gets hot; counterclockwise dragging brakes the wheel. Each ore becomes one plate after five seconds in the band. Overheating pauses production without destroying material.
-3. Route plates to **GEARS** or **RESERVE** by tapping or dragging the selector. Reserved plates are safe; use **Reserve: send to press** to move them to the press.
-4. Select **Gear press** and crank it. Two allocated plates make one gear. Switch back to the furnace when it needs heat. Both machines retain momentum and progress while you switch.
-5. Three gears award one motor kit. **Install motor** consumes it and switches your controls to the press. The furnace now turns and regulates its own heat without input.
-6. Make eight gears to finish and see elapsed time, manual-input time and automatic output. Replay resets the run without refreshing.
+- **Furnace:** drag the gold handle clockwise around the wheel. The belt drives a blower that pushes air into the fire. More air means more heat. Coast when hot; counterclockwise motion brakes. The hopper gravity-feeds ore into the chamber. Each ore becomes one plate after five seconds in the 35–80° band; overheating pauses production without destroying material.
+- **Gear press:** appears after two plates. The control switches to a lever integrated with the ram and die. Drag the gold grip down; the ram compresses the metal. Release to return it. Three full strokes consume two plates and make a gear. Holding a lowered lever or jittering it cannot produce another stroke.
+- **Routing:** appears after your first gear. Tap/drag GEARS or RESERVE. Transfer reserved plates back to the press when needed. The station tabs let you move between the furnace and press.
+- **Motor:** becomes visible after two gears. Three gears award one kit. Install it on the blower: the crank and fan continue turning without input and regulate the furnace. Make eight gears to finish, then replay without refreshing.
 
-Routing and wheel gestures have separate pointer ownership, so they work simultaneously; two fingers are never required. Pause and mute are in the header. Options contains reduced motion, diagnostics and reset/replay. Backgrounding pauses the game; use the play icon to resume.
+Right/Left Arrow turn/brake the furnace. Down Arrow pulls the press lever; Up Arrow returns it. Key repeat does not generate press strokes. The routing selector and machinery own independent pointers; simultaneous touches are optional.
 
-## Simulation and economy
+The machine controls disable text selection, native dragging and touch callouts. Pointer capture keeps a drag attached to its mechanism; cancellation, tab changes and pause release the controls. There is no tap or hold shortcut for manufacturing.
 
-`src/config/balance.ts` centralizes all tuning. The simulation advances at fixed 60 Hz with a capped frame accumulator. Clockwise displacement supplies wheel momentum; drag and load slow it down. Input, simulation, renderer, audio and save validation have separate modules.
+Pause/mute are in the header. Options includes reduced motion, diagnostics, reset/replay and an optional mechanism reference. Backgrounding pauses; use the play icon to resume. Machinery hum and impacts have been raised, and the hum includes higher harmonics so it carries better on phone speakers.
 
-The initial 12 ore support the first three gears. A documented supply adds **2 ore every 12 seconds**, including before automation, so routing mistakes cannot deadlock the motor. Furnace and press recipes are atomic. Conservation is `ore + press plates + reserve plates + 2 × gears = 12 + delivered ore`. The motor kit is a one-time milestone reward, not a realistic manufacturing recipe.
+## Simulation and saves
 
-Versioned localStorage saves every two seconds and on background/pause-related actions. Invalid saves fall back to a fresh run. There is no offline production or network telemetry. Diagnostics displays FPS, pointers, speed, temperature, progress, stall reason and local milestone timings. All fonts use system fallbacks without remote requests.
+Tuning lives in `src/config/balance.ts`. The furnace uses fixed 60 Hz steps, inertia, drag and load; the press uses actual lever displacement with top/bottom thresholds. Input, simulation, drawing, audio, save validation and UI progression are separate modules.
+
+The initial 12 ore support three gears. Supply adds **2 ore every 12 seconds**, even before automation, to prevent a deadlock. Recipes are atomic: `ore + press plates + reserve plates + 2 × gears = 12 + delivered ore`. A motor kit is a one-time game milestone, not a realistic manufacturing recipe.
+
+Version 2 localStorage saves preserve inventories, milestones and partial work from version 1 while replacing the old press wheel with a lever. Before routing unlocks, old reserve stock feeds the press automatically. Invalid saves start a fresh run. There is no offline production or network telemetry. Fonts use system fallbacks without remote requests.
 
 ## Verification
 
-- 13 unit tests: angular wrapping, event displacement, pointer ownership, inertia/braking, atomic recipes and conservation, exact temperature boundaries, motor installation, corrupt saves, and a complete input-driven run.
-- Deterministic feedback-controller run: first plate **7.1s**, first gear **36.6s**, motor **84.9s**, eight gears **205.6s**. Real human timing varies; motor timing is slightly ahead of the brief's provisional 90–150s target.
-- Browser check: mouse cranking and hold input visibly turn the wheel; plates are produced and advance the guide. Walkthrough open/close and options work. Controls and instructions fit at **320×640** and **390×844** without scrolling with diagnostics disabled.
-- `npm test`, `npm run build` and `npm audit` pass.
+24 tests cover wrapping, pointer isolation/capture/cancellation, lever displacement and full-stroke gating, material conservation, temperature boundaries, automation, saves/migration, progressive reveals and a complete input-driven run. The deterministic test operator produces its first plate at 7.1s, first gear at 16.5s, installs the motor at 36.0s and finishes at 85.5s. These timings are faster than the original provisional targets; physical playtesting should set the next tuning pass.
 
-## Next improvement
-
-Playtest the first minute on physical iOS and Android devices, especially the transition from smelting to pressing. Tune momentum and the tutorial from those observations. Two simultaneous physical touches and synthesized audio still need device validation. The current canvas has a deliberately compact scene on short screens; richer material exit animations and a more dramatic motor attachment are future polish.
+Browser checks cover circular cranking without text selection, first-screen layout, and the furnace-to-press transition. `npm test` and `npm run build` pass. Physical iOS/Android long-press behavior, simultaneous touch and perceived speaker volume still need device validation.

@@ -1,53 +1,170 @@
 import './styles.css';
-import { initialState, step, installMotor, transferReserve, type State } from './game/simulation';
+import { initialState, step, installMotor, transferReserve, setPressPosition } from './game/simulation';
 import { PointerControls } from './input/pointerControls';
 import { render } from './render/canvasRenderer';
 import { Sound } from './audio/sound';
 import { load, save as saveState } from './storage/save';
-const app=document.querySelector<HTMLDivElement>('#app')!;
-app.innerHTML=`<header><div><div class="brand">factory<span> crank.</span></div><p class="eyebrow">LITTLE WORKS. BIG IDEAS.</p></div><div class="tools"><button class="icon" id="mute" aria-label="Mute sound">♪</button><button class="icon" id="pause" aria-label="Pause">Ⅱ</button></div></header>
-<div class="mission"><div><small>YOUR FIRST PRODUCTION LINE</small><h1 id="next-action">Turn the furnace wheel.</h1></div><div class="goal"><span id="gears">0</span><small> / 8 GEARS</small></div></div><div class="goalbar"><i id="goal-fill"></i></div>
-<div class="scene"><span class="scene-label">THE WORKSHOP / 001</span><span class="live" id="live">● MANUAL</span><canvas aria-label="Animated factory with ore hopper, furnace, conveyor and gear press"></canvas><div class="status" id="status"></div></div>
-<div class="inventory"><div><span class="material">◆</span><section><b id="ore">12</b><small>IRON ORE</small></section></div><div><span class="material">▰</span><section><b id="plates">0</b><small>PLATES</small></section></div><div><span class="material">⚙</span><section><b id="gear-count">0</b><small>GEARS</small></section></div></div>
-<div class="motor"><span id="motor-label">⚡ <b>THE FIRST UPGRADE</b><br>Make 3 gears to earn a motor kit.</span><button id="install" disabled>Install motor ↗</button></div>
-<div class="controls"><div><p class="control-label">SEND NEW PLATES TO</p><div class="route" id="route" aria-label="Plate routing"><button class="selected" id="to-gears" aria-label="Route plates to gears">GEARS</button><button id="to-reserve" aria-label="Route plates to reserve">RESERVE</button></div><button class="small-action" id="transfer">Reserve: 0 · send to press ↗</button><div class="tabs"><button id="furnace" class="active">Furnace</button><button id="press">Gear press</button></div></div><div class="wheel-box"><button class="wheel" id="wheel" aria-label="Drag clockwise to crank. Hold Space or Arrow Right as an alternative."><svg viewBox="0 0 160 160"><circle cx="80" cy="80" r="72" fill="#14271d" stroke="#778460" stroke-width="3"/><g id="spokes"><circle cx="80" cy="80" r="60" fill="#243b29" stroke="#d0b779" stroke-width="12"/><path d="M80 24v112M24 80h112M40 40l80 80M40 120l80-80" stroke="#a49a69" stroke-width="9"/><circle cx="80" cy="80" r="18" fill="#d7be7b" stroke="#203623" stroke-width="5"/><circle cx="123" cy="44" r="12" fill="#edc989" stroke="#263b29" stroke-width="5"/></g><circle cx="80" cy="80" r="5" fill="#304930"/></svg></button><button class="hold-crank" id="hold-crank" aria-label="Hold to crank the selected machine">HOLD TO CRANK</button><p class="wheel-caption" id="wheel-caption">OR DRAG WHEEL CLOCKWISE</p></div></div>
-<div class="hint"><span>↻</span><div id="hint">Drag around the wheel. A little momentum goes a long way.</div></div><footer><span>SMALL FACTORY. MADE BY YOU.</span><button id="settings">OPTIONS ↗</button></footer><pre id="debug"></pre>
-<dialog id="options"><h2>Workshop options</h2><button id="show-tutorial">How to play</button><label><input type="checkbox" id="motion"> Reduce motion</label><label><input type="checkbox" id="debug-toggle"> Show diagnostics</label><button id="resume">Back to work</button><button id="restart">Reset & replay</button></dialog><dialog id="welcome"><p class="eyebrow">WELCOME TO YOUR LITTLE FACTORY</p><h2>Turn it.<br>Make something.</h2><div class="tutorial-wheel">↻</div><p><b>1. Hold “HOLD TO CRANK”</b> to heat your furnace. You can also drag clockwise around the wheel.</p><p><b>2. Make two plates.</b> Then select <b>Gear press</b> and crank it to make a gear.</p><p><b>3. Make three gears.</b> Install your motor and the furnace runs itself. Finish with eight gears.</p><button id="start-tutorial">Let’s make a plate ↗</button><button id="skip-tutorial" class="skip">Skip guide</button></dialog><dialog id="results"><p>PRODUCTION COMPLETE / 001</p><h2>You made it work.</h2><p id="stats"></p><button id="replay">Build it again ↗</button></dialog>`;
-const el=(id:string)=>document.getElementById(id)!;
-let state=load();const sound=new Sound();let paused=false,reduced=matchMedia('(prefers-reduced-motion: reduce)').matches,debug=false,key=false,holding=false,guide=true;
-try{sound.muted=localStorage.getItem('crank-muted')==='true';}catch{}
-el('wheel').addEventListener('pointerdown',()=>{if(!paused&&!state.finished&&!(state.automatic&&state.active==='furnace'))state[state.active].impulse+=.7;});
-const controls=new PointerControls(el('wheel'),el('route'),{turn:delta=>{if(!paused&&!state.finished&&!(state.automatic&&state.active==='furnace'))state[state.active].impulse+=delta;},route:value=>{state.route=value;},gesture:()=>{sound.unlock();}});
-function reset(){state=initialState();paused=false;key=false;holding=false;el('results').matches('[open]')&&(el('results') as HTMLDialogElement).close();(el('options') as HTMLDialogElement).close();save();}
-function save(){try{saveState(state);localStorage.setItem('crank-muted',String(sound.muted));}catch{/* Storage can be unavailable in private mode. */}}
-const hold=el('hold-crank');
-hold.onpointerdown=e=>{e.preventDefault();hold.setPointerCapture(e.pointerId);holding=true;sound.unlock();if(!paused)state[state.active].impulse+=1;};
-const stopHolding=()=>holding=false;
-hold.onpointerup=stopHolding;hold.onpointercancel=stopHolding;hold.onlostpointercapture=stopHolding;
-const welcome=el('welcome') as HTMLDialogElement;
-function showTutorial(){paused=true;holding=false;welcome.showModal();}
-function closeTutorial(skip:boolean){guide=!skip;welcome.close();paused=false;try{localStorage.setItem('crank-intro','seen');}catch{}}
-el('start-tutorial').onclick=()=>closeTutorial(false);el('skip-tutorial').onclick=()=>closeTutorial(true);
-welcome.addEventListener('close',()=>paused=false);
-el('show-tutorial').onclick=()=>{(el('options') as HTMLDialogElement).close();showTutorial();};
-try{if(!localStorage.getItem('crank-intro'))showTutorial();}catch{showTutorial();}
-el('mute').onclick=()=>{sound.unlock();sound.muted=!sound.muted;save();};el('pause').onclick=()=>{paused=!paused;key=false;holding=false;save();};
-el('install').onclick=()=>{if(installMotor(state)){state.active='press';sound.ping(760);save();}};
-el('transfer').onclick=()=>transferReserve(state);
-el('to-gears').onclick=()=>state.route='gears';el('to-reserve').onclick=()=>state.route='reserve';
-for(const machine of ['furnace','press'] as const)el(machine).onclick=()=>{state.active=machine;};
-el('settings').onclick=()=>{paused=true;(el('options') as HTMLDialogElement).showModal();};el('resume').onclick=()=>{(el('options') as HTMLDialogElement).close();paused=false;};el('options').addEventListener('close',()=>paused=false);
-(el('motion') as HTMLInputElement).checked=reduced;el('motion').onchange=()=>reduced=(el('motion') as HTMLInputElement).checked;el('debug-toggle').onchange=()=>debug=(el('debug-toggle') as HTMLInputElement).checked;el('restart').onclick=reset;el('replay').onclick=reset;
-window.addEventListener('keydown',e=>{if((e.code==='Space'||e.code==='ArrowRight')&&(!(e.target instanceof HTMLButtonElement)||e.target.id==='wheel'||e.target.id==='hold-crank')&&!(e.target instanceof HTMLInputElement)){e.preventDefault();key=true;sound.unlock();}});window.addEventListener('keyup',()=>key=false);window.addEventListener('blur',()=>{key=false;holding=false;paused=true;save();});document.addEventListener('visibilitychange',()=>{if(document.hidden){paused=true;save();}});
-function bottleneck(){if(state.active==='press')return state.plates<2?'NEEDS 2 PLATES · ROUTE OR TRANSFER RESERVE':state.press.speed<1?'PRESS READY · TURN THE WHEEL':'PRESSING · TWO PLATES → ONE GEAR';return !state.ore?'ORE DELIVERY ON THE WAY':state.temperature<35?'TOO COLD · TURN TO BUILD HEAT':state.temperature>80?'TOO HOT · LET THE WHEEL COAST':'IN THE BAND · SMELTING IRON';}
-let last=performance.now(),acc=0,saveTimer=0,fps=60;
-function frame(now:number){const delta=Math.min((now-last)/1000,.1);last=now;fps=.95*fps+.05/(delta||.016);if(!paused){acc+=delta;while(acc>=1/60){if((key||holding)&&!(state.automatic&&state.active==='furnace'))state[state.active].impulse+=.09;const plates=state.plates+state.reserve,gears=state.gears;step(state,1/60);if(state.gears>gears)sound.ping(550);else if(state.plates+state.reserve>plates)sound.ping(300);acc-=1/60;}saveTimer+=delta;if(saveTimer>2){save();saveTimer=0;}}else acc=0;
- sound.update(state[state.active].speed,paused||state.finished);
- render(document.querySelector('canvas')!,state,reduced);
- el('gears').textContent=el('gear-count').textContent=String(state.gears);el('ore').textContent=String(state.ore);el('plates').textContent=String(state.plates+state.reserve);el('goal-fill').style.width=`${state.gears/8*100}%`;el('status').textContent=paused?'PAUSED · TAKE A BREATHER':bottleneck();el('live').textContent=state.automatic?'● MOTOR ONLINE':'● MANUAL';
- el('spokes').setAttribute('transform',`rotate(${state[state.active].angle*180/Math.PI} 80 80)`);el('to-gears').classList.toggle('selected',state.route==='gears');el('to-reserve').classList.toggle('selected',state.route==='reserve');el('furnace').classList.toggle('active',state.active==='furnace');el('press').classList.toggle('active',state.active==='press');el('transfer').textContent=`Reserve: ${state.reserve} · send to press ↗`;(el('install') as HTMLButtonElement).disabled=!state.kit||state.automatic;el('motor-label').innerHTML=state.automatic?'⚡ <b>HANDS FREE. THAT’S PROGRESS.</b><br>Furnace motor is running the show.':state.kit?'⚡ <b>YOUR MOTOR KIT IS READY</b><br>Install it. Then let go.':`⚡ <b>THE FIRST UPGRADE</b><br>${state.gears} / 3 gears to earn a motor kit.`;
- el('wheel-caption').textContent=state.active==='furnace'&&state.automatic?'MOTOR POWERED':'OR DRAG WHEEL CLOCKWISE';(el('hold-crank') as HTMLButtonElement).disabled=state.active==='furnace'&&state.automatic;const tutorial=state.temperature>80&&!state.automatic?['HEAT CHECK / TOO HOT','Let the furnace cool.', 'Release the crank. Nothing is lost: smelting resumes when the temperature drops below 80°.']:state.reserve>=2&&state.plates<2?['ROUTING / RESERVE','Send plates to the press.', 'Tap Reserve: send to press on the left. The press needs two allocated plates per gear.']:state.automatic?['06 / HANDS FREE','Crank the gear press.', 'The furnace runs itself now. Hold to crank the press until you have 8 gears.']:state.kit?['05 / AUTOMATION','Install your motor.', 'Tap Install motor above. It powers the furnace so you can focus on gears.']:state.gears?['04 / BUILD A MOTOR','Make three gears.', 'Keep making plates and pressing gears. Switch back to the furnace if it cools.']:state.plates>=2?['03 / YOUR FIRST GEAR',state.active==='press'?'Hold to press a gear.':'Select Gear press.', state.active==='press'?'Hold to crank until the press finishes. Two plates become one gear.':'Tap Gear press, then hold to crank. Two plates become one gear.']:state.firstPlate!==null?['02 / PLATE BY PLATE','Make a second plate.', 'Keep the furnace warm. Two plates are needed for the first gear.']:['01 / HEAT THE FURNACE','Hold to crank.', 'Press and hold HOLD TO CRANK below the wheel. Keep going until your first plate appears.'];
- el('next-action').textContent=guide?tutorial[1]:'From ore to more.';el('hint').textContent=guide?tutorial[2]:'Make 8 gears. Three gears unlock the furnace motor.';document.querySelector('.mission small')!.textContent=guide?tutorial[0]:'YOUR FIRST PRODUCTION LINE';
- el('pause').textContent=paused?'▶':'Ⅱ';el('mute').textContent=sound.muted?'♩':'♪';el('mute').setAttribute('aria-pressed',String(sound.muted));el('debug').style.display=debug?'block':'none';el('debug').textContent=`${fps.toFixed(0)} FPS · ${(1000/fps).toFixed(1)} ms · pointers ${controls.activePointers}\n${state.active}: ${state[state.active].speed.toFixed(1)} rad/s · ${Math.round(state.temperature)}°\nsmelt ${state.furnaceProgress.toFixed(2)} / press ${state.pressProgress.toFixed(2)}\n${bottleneck()}\nfirst plate ${state.firstPlate?.toFixed(1)??'—'}s · gear ${state.firstGear?.toFixed(1)??'—'}s · motor ${state.motorAt?.toFixed(1)??'—'}s`;
- if(state.finished&&!(el('results') as HTMLDialogElement).open){el('stats').textContent=`8 gears. One little factory. ${Math.floor(state.elapsed/60)}m ${Math.floor(state.elapsed%60)}s elapsed · ${state.manualTime.toFixed(1)}s manual input · ${state.autoOutput} plates made automatically.`;(el('results') as HTMLDialogElement).showModal();save();}requestAnimationFrame(frame);}
+import { factoryMarkup } from './ui/template';
+import { tutorial } from './ui/tutorial';
+import { unlocks } from './ui/unlocks';
+
+const app = document.querySelector<HTMLDivElement>('#app')!;
+app.innerHTML = factoryMarkup;
+const el = (id: string) => document.getElementById(id)!;
+const dialog = (id: string) => el(id) as HTMLDialogElement;
+const canvas = document.querySelector('canvas')!;
+for (const surface of [el('wheel'),el('lever'),el('route')]) {
+ surface.addEventListener('contextmenu',e=>e.preventDefault());
+ surface.addEventListener('dragstart',e=>e.preventDefault());
+}
+let state = load();
+setPressPosition(state,0);
+if(!unlocks(state).routing) { state.route = 'gears'; transferReserve(state); }
+const sound = new Sound();
+let paused = false, reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+let debug = false, guide = true, turnKey = 0;
+try { sound.muted = localStorage.getItem('crank-muted') === 'true'; } catch { /* Optional preferences. */ }
+
+function canOperate() { return !paused && !state.finished; }
+function turn(delta: number) {
+ if (canOperate() && !state.automatic && state.active === 'furnace') state.furnace.impulse += delta;
+}
+function pull(position: number) {
+ if (!canOperate() || state.active !== 'press') return;
+ const gears = state.gears;
+ if (setPressPosition(state, position)) sound.clank();
+ if (state.gears > gears) sound.ping(550);
+}
+function returnLever() { setPressPosition(state, 0); }
+const controls = new PointerControls(el('wheel'), el('route'), {
+ turn,
+ route: value => { if (canOperate()) state.route = value; },
+ gesture: () => sound.unlock(),
+ lever: pull,
+ leverRelease: returnLever,
+}, el('lever'));
+function releaseControls() { turnKey = 0; controls.reset(); }
+function setPaused(value: boolean) { releaseControls(); paused = value; save(); }
+function save() {
+ saveState(state);
+ try { localStorage.setItem('crank-muted', String(sound.muted)); } catch { /* Storage may be disabled. */ }
+}
+function reset() {
+ releaseControls(); state = initialState(); paused = false;
+ for (const id of ['results','options']) if(dialog(id).open) dialog(id).close();
+ save();
+}
+function showTutorial() { setPaused(true); dialog('welcome').showModal(); }
+function closeTutorial(skip: boolean) {
+ guide = !skip; dialog('welcome').close(); paused = false;
+ try { localStorage.setItem('crank-intro-mechanical-v2', 'seen'); } catch { /* Optional preferences. */ }
+}
+el('start-tutorial').onclick = () => closeTutorial(false);
+el('skip-tutorial').onclick = () => closeTutorial(true);
+dialog('welcome').addEventListener('close', () => paused = false);
+el('show-tutorial').onclick = () => { dialog('options').close(); showTutorial(); };
+// Machines introduce themselves through production, without an opening modal.
+el('mute').onclick = () => { sound.unlock(); sound.muted = !sound.muted; save(); };
+el('pause').onclick = () => setPaused(!paused);
+el('install').onclick = () => {
+ if (installMotor(state)) { releaseControls(); sound.ping(760); save(); }
+};
+el('transfer').onclick = () => transferReserve(state);
+el('to-gears').onclick = () => state.route = 'gears';
+el('to-reserve').onclick = () => state.route = 'reserve';
+for (const machine of ['furnace','press'] as const) el(machine).onclick = () => {
+ releaseControls(); state.active = machine;
+};
+el('settings').onclick = () => { setPaused(true); dialog('options').showModal(); };
+el('resume').onclick = () => dialog('options').close();
+dialog('options').addEventListener('close', () => paused = false);
+(el('motion') as HTMLInputElement).checked = reduced;
+el('motion').onchange = () => reduced = (el('motion') as HTMLInputElement).checked;
+el('debug-toggle').onchange = () => debug = (el('debug-toggle') as HTMLInputElement).checked;
+el('restart').onclick = reset; el('replay').onclick = reset;
+window.addEventListener('keydown', e => {
+ if (!canOperate() || !['ArrowRight','ArrowLeft','ArrowDown','ArrowUp'].includes(e.code)) return;
+ if(e.target instanceof HTMLInputElement) return;
+ if(e.target instanceof HTMLButtonElement && !['wheel','lever'].includes(e.target.id)) return;
+ e.preventDefault(); sound.unlock();
+ if(state.active==='furnace') turnKey = e.code==='ArrowRight'?1:e.code==='ArrowLeft'?-1:0;
+ else if(!e.repeat) {
+  if(e.code==='ArrowDown') pull(1);
+  if(e.code==='ArrowUp') returnLever();
+ }
+});
+window.addEventListener('keyup', e => { if(['ArrowLeft','ArrowRight'].includes(e.code)) turnKey = 0; });
+window.addEventListener('blur', () => setPaused(true));
+document.addEventListener('visibilitychange', () => { if(document.hidden) setPaused(true); });
+function bottleneck() {
+ if(state.active==='press') return state.plates<2?'NEEDS 2 PLATES · ROUTE OR TRANSFER RESERVE':state.press.position>=.9?'RETURN THE LEVER · THEN PULL AGAIN':'PULL LEVER ↓ · RAM COMPRESSES PLATES';
+ return !state.ore?'ORE DELIVERY ON THE WAY':state.temperature<35?'MORE AIR → MORE HEAT · TURN BLOWER':state.temperature>80?'TOO HOT · LET THE BLOWER COAST':'FIRE IN THE BAND · SMELTING IRON';
+}
+function updateHud(fps: number) {
+ el('gears').textContent = el('gear-count').textContent = String(state.gears);
+ el('ore').textContent = String(state.ore); el('plates').textContent = String(state.plates+state.reserve);
+ const unlocked = unlocks(state);
+ app.classList.toggle('starting',!unlocked.press);
+ el('stock-plates').hidden = !unlocked.plates; el('stock-gears').hidden = !unlocked.gears;
+ el('decision-controls').hidden = !unlocked.press; el('allocation').hidden = !unlocked.routing;
+ document.querySelector('.motor')!.toggleAttribute('hidden',!unlocked.motor);
+ document.querySelector('.scene-label')!.textContent = unlocked.press?'ORE → HEAT → PLATES → FORCE → GEARS':'ORE HOPPER → FURNACE → IRON PLATE';
+ const goalCount = unlocked.gears?state.gears:unlocked.press?0:state.firstPlate===null?0:1;
+ const goalTotal = unlocked.gears?8:1;
+ el('gears').textContent = String(goalCount);
+ el('goal-label').textContent = unlocked.gears?' / 8 GEARS':unlocked.press?' / 1 GEAR':' / 1 PLATE';
+ el('goal-fill').style.width = `${goalCount/goalTotal*100}%`;
+ el('status').textContent = paused?'PAUSED · TAKE A BREATHER':bottleneck();
+ el('live').textContent = state.automatic?'● MOTOR ONLINE':'● MANUAL';
+ el('spokes').setAttribute('transform',`rotate(${state.furnace.angle*180/Math.PI} 90 90)`);
+ el('control-fan').setAttribute('transform',`rotate(${state.furnace.angle*360/Math.PI} 145 51)`);
+ el('lever-arm').setAttribute('transform',`rotate(${state.press.position*85} 104 68)`);
+ el('lever-ram').setAttribute('transform',`translate(0 ${state.press.position*22})`);
+ el('lever-link').setAttribute('d',`M68 ${80+state.press.position*22}L104 68`);
+ el('press-stock').style.opacity = state.plates>=2?'1':'.2';
+ const pressActive = state.active==='press';
+ el('wheel').hidden = pressActive; el('lever').hidden = !pressActive;
+ el('mechanism-label').textContent = pressActive?'GEAR PRESS / RAM & DIE':'FURNACE / BLOWER DRIVE';
+ el('wheel-caption').textContent = pressActive?'PULL ↓ → FORCE → SHAPED METAL':state.automatic?'MOTOR → AIR → STEADY FIRE':'TURN ↻ → AIR → HOTTER FIRE';
+ el('wheel').setAttribute('aria-disabled',String(state.automatic));
+ el('to-gears').classList.toggle('selected',state.route==='gears');
+ el('to-reserve').classList.toggle('selected',state.route==='reserve');
+ el('furnace').classList.toggle('active',!pressActive); el('press').classList.toggle('active',pressActive);
+ el('transfer').textContent = `Reserve: ${state.reserve} · send to press ↗`;
+ (el('install') as HTMLButtonElement).disabled = !state.kit||state.automatic;
+ el('motor-label').innerHTML = state.automatic?'⚡ <b>THE MOTOR DRIVES YOUR BLOWER</b><br>Air keeps feeding the fire. Hands free.':state.kit?'⚡ <b>YOUR MOTOR KIT IS READY</b><br>Install it on the blower drive.':`⚡ <b>THE FIRST UPGRADE</b><br>${state.gears} / 3 gears to earn a motor kit.`;
+ const instruction = tutorial(state);
+ el('next-action').textContent = guide?instruction.action:'From ore to more.';
+ el('hint').textContent = guide?instruction.hint:'Turn the furnace blower. Pull the press lever. Make 8 gears.';
+ el('hint-icon').textContent = pressActive?'↓':'↻';
+ document.querySelector('.mission small')!.textContent = guide?instruction.stage:'YOUR FIRST PRODUCTION LINE';
+ el('pause').textContent = paused?'▶':'Ⅱ'; el('pause').setAttribute('aria-label',paused?'Resume':'Pause');
+ el('mute').textContent = sound.muted?'♩':'♪'; el('mute').setAttribute('aria-pressed',String(sound.muted));
+ el('debug').style.display = debug?'block':'none';
+ el('debug').textContent = `${fps.toFixed(0)} FPS · ${(1000/fps).toFixed(1)} ms · pointers ${controls.activePointers}\nblower ${state.furnace.speed.toFixed(1)} rad/s · ${Math.round(state.temperature)}°\nlever ${state.press.position.toFixed(2)} · strokes ${state.press.strokes}\nsmelt ${state.furnaceProgress.toFixed(2)} / press ${state.pressProgress.toFixed(2)}\n${bottleneck()}`;
+}
+let last = performance.now(), accumulator = 0, saveTimer = 0, fps = 60;
+function frame(now: number) {
+ const delta = Math.min((now-last)/1000,.1); last = now; fps = .95*fps+.05/(delta||.016);
+ if(!paused) {
+  accumulator += delta;
+  while(accumulator>=1/60) {
+   if(turnKey) turn(turnKey*.09);
+   const plates = state.plates+state.reserve;
+   const hadPress = unlocks(state).press;
+   step(state,1/60);
+   if(state.plates+state.reserve>plates) sound.ping(300);
+   if(!hadPress&&unlocks(state).press) { releaseControls(); state.active = 'press'; }
+   accumulator -= 1/60;
+  }
+  saveTimer += delta; if(saveTimer>2) { save(); saveTimer = 0; }
+ } else accumulator = 0;
+ sound.update(state.furnace.speed,paused||state.finished);
+ render(canvas,state,reduced); updateHud(fps);
+ if(state.finished&&!dialog('results').open) {
+  el('stats').textContent = `8 gears. One little factory. ${Math.floor(state.elapsed/60)}m ${Math.floor(state.elapsed%60)}s elapsed · ${state.manualTime.toFixed(1)}s manual input · ${state.autoOutput} plates made automatically.`;
+  dialog('results').showModal(); save();
+ }
+ requestAnimationFrame(frame);
+}
 requestAnimationFrame(frame);
