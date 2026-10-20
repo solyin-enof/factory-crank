@@ -54,3 +54,11 @@ Plan review: Mining is a physical downward swing, not a tap or hold shortcut. Th
 - Browser swipes awarded 2 ore each; the third swing revealed the furnace with 6 ore. Return-to-mine works. Text selection stayed empty.
 - Mine and furnace layouts fit 320×640 and 390×844. Existing inventories and partial work migrate to save version 3.
 - Complete deterministic mining-to-eight-gears run finishes in 102s. Physical phone sound/touch feel remains a playtest follow-up.
+
+## Mobile hostname access
+- [x] Add the exact Tailscale hostname to Vite's allowed hosts.
+- [x] Verify the live server serves that Host header and still rejects unrelated hosts; build and commit.
+
+Plan review: Reproduced HTTP 403 using the phone's hostname as the Host header. Add an explicit allowlist entry; retain existing all-interface listening for mobile access.
+
+Mobile hostname review: Reproduced HTTP 403, added vite.config.ts and restarted the existing dev server on port 5173. The exact Tailscale Host header now returns the game with HTTP 200; unrelated.invalid still returns HTTP 403; localhost returns HTTP 200. Production build passes.
