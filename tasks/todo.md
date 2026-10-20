@@ -82,3 +82,12 @@ Plan review: docs/workshop-expansion.md defines the bounded playable expansion. 
 Plan review: Publish the current Factory Crank source to solyin-enof/factory-crank using a fresh history; preserve local in-progress changes.
 
 Publication review: Public repository https://github.com/solyin-enof/factory-crank verified in the solyin-enof browser session. All 39 source/document files uploaded in a fresh Git history. Tests: 40 passing; production build passes. QA artifacts, dependencies, build output and machine-specific allowed hostname are excluded. Local gameplay work remains unchanged.
+
+## GitHub Pages playtest
+- [x] Build public snapshot with /factory-crank/ asset base.
+- [x] Commit and upload static files to gh-pages; enable Pages.
+- [x] Verify deployed game loads and accepts input.
+
+Pages review: Public game loads in the browser; Down Arrow mines two ore. Production assets use /factory-crank/ and PWA paths are relative.
+
+Plan review: Serve the compiled game from gh-pages at https://solyin-enof.github.io/factory-crank/.

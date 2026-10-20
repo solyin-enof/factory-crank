@@ -1,5 +1,7 @@
 # Factory Crank
 
+[Play in your browser](https://solyin-enof.github.io/factory-crank/) — works on phones and desktop.
+
 A mobile factory game about operating machinery, then building a motor that takes over your work. TypeScript, Vite, Canvas 2D and SVG controls. Original visuals and synthesized Web Audio; no backend or accounts.
 
 ## Run
