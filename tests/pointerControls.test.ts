@@ -28,3 +28,63 @@ describe('independent pointer ownership', () => {
     expect(tracker.size).toBe(0);
   });
 });
+
+import { leverPosition, PointerControls } from '../src/input/pointerControls';
+
+class FakeControl extends EventTarget {
+  captures = new Set<number>();
+  getBoundingClientRect() { return { left: 0, top: 0, width: 200, height: 200 }; }
+  setPointerCapture(id: number) { this.captures.add(id); }
+  hasPointerCapture(id: number) { return this.captures.has(id); }
+  releasePointerCapture(id: number) { this.captures.delete(id); }
+  pointer(type: string, pointerId: number, clientY = 0, clientX = 0) {
+    this.dispatchEvent(Object.assign(new Event(type, { cancelable: true }), { pointerId, clientX, clientY }));
+  }
+  get element(): HTMLElement { return this as unknown as HTMLElement; }
+}
+
+describe('lever displacement', () => {
+  it('normalizes total downward travel and clamps the physical endpoints', () => {
+    expect(leverPosition(25, 200)).toBe(0.25);
+    expect(leverPosition(100, 200)).toBe(1);
+    expect(leverPosition(500, 200)).toBe(1);
+    expect(leverPosition(-25, 200)).toBe(0);
+    expect(leverPosition(20, 0)).toBe(0);
+  });
+
+  it('keeps controls independent, rejects duplicate physical owners, and cancels cleanly', () => {
+    const wheel = new FakeControl();
+    const route = new FakeControl();
+    const lever = new FakeControl();
+    const positions: number[] = [];
+    const turns: number[] = [];
+    let releases = 0;
+    const controls = new PointerControls(wheel.element, route.element, {
+      turn: value => turns.push(value), route: () => {}, gesture: () => {},
+      lever: value => positions.push(value), leverRelease: () => { releases++; },
+    }, lever.element);
+    wheel.pointer('pointerdown', 1, 100, 200);
+    wheel.pointer('pointerdown', 4, 100, 200);
+    lever.pointer('pointerdown', 2, 20);
+    lever.pointer('pointerdown', 5, 20);
+    route.pointer('pointerdown', 3);
+    expect(controls.activePointers).toBe(3);
+    expect(positions).toEqual([]); // Holding or tapping cannot produce a stroke.
+    lever.pointer('pointermove', 5, 120);
+    lever.pointer('pointermove', 2, 45);
+    lever.pointer('pointermove', 2, 70);
+    expect(positions).toEqual([0.25, 0.5]);
+    lever.pointer('pointercancel', 2);
+    lever.pointer('lostpointercapture', 2);
+    expect(releases).toBe(1);
+    expect(controls.activePointers).toBe(2);
+    wheel.pointer('pointermove', 1, 200, 100);
+    expect(turns).toEqual([0.65]);
+    controls.reset();
+    expect(controls.activePointers).toBe(0);
+    expect(wheel.captures.size + route.captures.size + lever.captures.size).toBe(0);
+    wheel.pointer('pointermove', 1, 100, 0);
+    expect(turns).toHaveLength(1);
+    controls.dispose();
+  });
+});

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { initialState, step, installMotor, transferReserve, advanceWheel } from '../src/game/simulation';
+import { initialState, step, installMotor, transferReserve, advanceWheel, setPressPosition } from '../src/game/simulation';
 import { smelt, pressGear } from '../src/game/recipes';
 import { BALANCE as B } from '../src/config/balance';
 import { updateProgression } from '../src/game/progression';
@@ -76,7 +76,7 @@ describe('factory simulation', () => {
     run(s, 20);
     expect(s.autoOutput).toBeGreaterThan(0);
     for (let i = 0; i < 180 * 60 && !s.finished; i++) {
-      s.press.impulse += 0.08;
+      if (i % 90 === 0) { setPressPosition(s, 0); setPressPosition(s, 1); }
       step(s, 1 / 60);
       expect(s.ore + s.plates + s.reserve + s.gears * 2).toBe(12 + s.deliveries * 2);
     }
@@ -105,8 +105,9 @@ describe('factory simulation', () => {
         (B.cooling + (55 - s.temperature) * 0.7) / B.heating * B.maxSpeed));
       if (!s.automatic && s.furnace.speed < targetSpeed - 1) {
         s.furnace.impulse += 0.2;
-      } else if (s.plates >= 2) {
-        s.press.impulse += 0.15;
+      } else if (s.plates >= 2 && frame % 90 === 0) {
+        setPressPosition(s, 0);
+        setPressPosition(s, 1);
       }
       step(s, 1 / 60);
       if (s.kit > 0) expect(installMotor(s)).toBe(true);
@@ -122,6 +123,41 @@ describe('factory simulation', () => {
     console.info('Full playable run timings (seconds)', {
       firstPlate: s.firstPlate, firstGear: s.firstGear, motor: s.motorAt, finish: s.elapsed,
     });
+  });
+
+  it('requires full return travel and never manufactures from holding or jitter', () => {
+    const s = initialState();
+    expect(setPressPosition(s, 1)).toBe(false);
+    expect(s.press.strokes).toBe(0);
+    s.plates = 6;
+    // An empty stroke remains disarmed even when material becomes available.
+    expect(setPressPosition(s, 1)).toBe(false);
+    setPressPosition(s, 0);
+    expect(setPressPosition(s, 0.89)).toBe(false);
+    expect(setPressPosition(s, 0.9)).toBe(true);
+    for (let i = 0; i < 600; i++) {
+      setPressPosition(s, i % 2 ? 0.95 : 1);
+      step(s, 1 / 60);
+    }
+    expect(s.press.strokes).toBe(1);
+    expect(s.gears).toBe(0);
+    for (let i = 0; i < 2; i++) {
+      setPressPosition(s, 0.16);
+      expect(setPressPosition(s, 1)).toBe(false);
+      setPressPosition(s, 0.15);
+      expect(setPressPosition(s, 1)).toBe(true);
+    }
+    expect(s.gears).toBe(1);
+    expect(s.plates).toBe(4);
+    expect(s.pressProgress).toBe(0);
+    const pose = {...s.press};
+    expect(setPressPosition(s, Number.NaN)).toBe(false);
+    expect(setPressPosition(s, Infinity)).toBe(false);
+    expect(s.press).toEqual(pose);
+    setPressPosition(s, -10);
+    expect(s.press.position).toBe(0);
+    expect(setPressPosition(s, 10)).toBe(true);
+    expect(s.press.position).toBe(1);
   });
 
 });

@@ -10,7 +10,7 @@ export const BALANCE = {
   heating: 12,
   cooling: 3,
   smeltSeconds: 5,
-  pressSeconds: 24,
+  pressStrokes: 3,
   motorGears: 3,
   goalGears: 8,
   deliverySeconds: 12,
