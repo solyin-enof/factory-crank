@@ -38,3 +38,19 @@ Plan review: Keep the hopper as a gravity feed, show a belt-driven blower on the
 - Fresh game opens without a modal, press, routing or motor clutter. Opening and press layouts checked at 390×844 and 320×640; compact opening adjusted by 16px after measurement.
 - Blower hum gain increased from .025 to .085 and impact gain from .07 to .23. Hum pitch/harmonics adjusted for phone speakers; physical iOS callout behavior and perceived volume remain device checks.
 - The new lever makes the deterministic expert run quicker (85.5s); physical playtesting should guide balance instead of adding artificial waits.
+
+## Mining before smelting
+- [x] Start with a rock seam and swipe-operated pickaxe, with zero loose ore.
+- [x] Award two ore per full swing; reveal furnace after three swings (six ore).
+- [x] Keep the mine available for supply; start automatic deliveries only after the furnace motor is installed.
+- [x] Add pickaxe impact, rock chips, mining save migration and progression tests.
+- [x] Verify browser gestures, mobile layout, tests and build; document and commit.
+
+Plan review: Mining is a physical downward swing, not a tap or hold shortcut. The mine starts alone. Three swings reveal the furnace; later tabs allow Mine/Furnace/Press. Recipes conserve mined and delivered ore. Existing saves keep their inventories and skip the new opening.
+
+
+## Mining review
+- 28 tests and the production build pass. Conservation now includes mined ore, and automatic deliveries accrue only while the motor runs.
+- Browser swipes awarded 2 ore each; the third swing revealed the furnace with 6 ore. Return-to-mine works. Text selection stayed empty.
+- Mine and furnace layouts fit 320×640 and 390×844. Existing inventories and partial work migrate to save version 3.
+- Complete deterministic mining-to-eight-gears run finishes in 102s. Physical phone sound/touch feel remains a playtest follow-up.

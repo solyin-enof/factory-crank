@@ -1,5 +1,7 @@
 export const BALANCE = {
-  initialOre: 12,
+  initialOre: 0,
+  miningOre: 2,
+  miningUnlockOre: 6,
   initialTemperature: 20,
   temperatureMin: 35,
   temperatureMax: 80,

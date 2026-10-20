@@ -1,5 +1,5 @@
 export type Route = 'gears' | 'reserve';
-type Control = 'wheel' | 'route' | 'lever';
+type Control = 'wheel' | 'route' | 'lever' | 'pickaxe';
 
 export function leverPosition(deltaY: number, height: number): number {
   if (!Number.isFinite(deltaY) || !Number.isFinite(height) || height <= 0) return 0;
@@ -39,12 +39,14 @@ export interface PointerCallbacks {
   gesture(): void;
   lever?(position: number): void;
   leverRelease?(): void;
+  swing?(position: number): void;
+  swingRelease?(): void;
 }
 
 export class PointerControls {
   private readonly pointers = new PointerTracker();
   private readonly angles = new Map<number, number>();
-  private readonly leverStarts = new Map<number, number>();
+  private readonly verticalStarts = new Map<number, number>();
   private readonly captured = new Map<number, HTMLElement>();
   private readonly listeners = new AbortController();
 
@@ -53,10 +55,12 @@ export class PointerControls {
     private readonly route: HTMLElement,
     private readonly callbacks: PointerCallbacks,
     lever?: HTMLElement,
+    pickaxe?: HTMLElement,
   ) {
     this.attach(wheel, 'wheel');
     this.attach(route, 'route');
     if (lever) this.attach(lever, 'lever');
+    if (pickaxe) this.attach(pickaxe, 'pickaxe');
   }
 
   get activePointers(): number { return this.pointers.size; }
@@ -73,8 +77,9 @@ export class PointerControls {
     }
     this.captured.clear();
     this.angles.clear();
-    this.leverStarts.clear();
+    this.verticalStarts.clear();
     this.callbacks.leverRelease?.();
+    this.callbacks.swingRelease?.();
   }
 
   private attach(element: HTMLElement, control: Control): void {
@@ -86,7 +91,7 @@ export class PointerControls {
       this.captured.set(event.pointerId, element);
       this.callbacks.gesture();
       if (control === 'wheel') this.angles.set(event.pointerId, this.angle(event));
-      else if (control === 'lever') this.leverStarts.set(event.pointerId, event.clientY);
+      else if (control === 'lever' || control === 'pickaxe') this.verticalStarts.set(event.pointerId, event.clientY);
       else this.selectRoute(event);
     }, options);
     element.addEventListener('pointermove', (event) => {
@@ -96,9 +101,10 @@ export class PointerControls {
         this.selectRoute(event);
         return;
       }
-      if (control === 'lever') {
-        const start = this.leverStarts.get(event.pointerId);
-        if (start !== undefined) this.callbacks.lever?.(leverPosition(event.clientY - start, element.getBoundingClientRect().height));
+      if (control === 'lever' || control === 'pickaxe') {
+        const start = this.verticalStarts.get(event.pointerId);
+        const move = control === 'lever' ? this.callbacks.lever : this.callbacks.swing;
+        if (start !== undefined) move?.(leverPosition(event.clientY - start, element.getBoundingClientRect().height));
         return;
       }
       const angle = this.angle(event);
@@ -114,8 +120,10 @@ export class PointerControls {
       this.pointers.release(event.pointerId);
       this.angles.delete(event.pointerId);
       this.captured.delete(event.pointerId);
-      this.leverStarts.delete(event.pointerId);
-      if (control === 'lever') this.callbacks.leverRelease?.();
+      this.verticalStarts.delete(event.pointerId);
+      const releaseVertical = control === 'lever' ? this.callbacks.leverRelease
+        : control === 'pickaxe' ? this.callbacks.swingRelease : undefined;
+      releaseVertical?.();
       if (element.hasPointerCapture(event.pointerId)) element.releasePointerCapture(event.pointerId);
     };
     element.addEventListener('pointerup', release, options);
