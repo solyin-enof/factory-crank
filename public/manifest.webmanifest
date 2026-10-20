@@ -1,1 +1,1 @@
-{"name":"Factory Crank","short_name":"Crank","start_url":"/","display":"standalone","background_color":"#182925","theme_color":"#182925","icons":[{"src":"/icon.svg","sizes":"any","type":"image/svg+xml","purpose":"any"}]}
+{"name":"Factory Crank","short_name":"Crank","start_url":"./","display":"standalone","background_color":"#182925","theme_color":"#182925","icons":[{"src":"./icon.svg","sizes":"any","type":"image/svg+xml","purpose":"any"}]}
