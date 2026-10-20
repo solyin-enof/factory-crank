@@ -76,7 +76,9 @@ Plan review: docs/workshop-expansion.md defines the bounded playable expansion. 
 ## Public test repository
 - [x] Find the solyin-enof GitHub browser session and review publication files.
 - [x] Verify current snapshot: 40 tests pass and production build succeeds.
-- [ ] Publish a fresh public snapshot without QA artifacts or local hostname.
-- [ ] Verify uploaded files and public visibility.
+- [x] Publish a fresh public snapshot without QA artifacts or local hostname.
+- [x] Verify uploaded files and public visibility.
 
 Plan review: Publish the current Factory Crank source to solyin-enof/factory-crank using a fresh history; preserve local in-progress changes.
+
+Publication review: Public repository https://github.com/solyin-enof/factory-crank verified in the solyin-enof browser session. All 39 source/document files uploaded in a fresh Git history. Tests: 40 passing; production build passes. QA artifacts, dependencies, build output and machine-specific allowed hostname are excluded. Local gameplay work remains unchanged.
